@@ -23,13 +23,13 @@
 
 // right hand pins
 
-#define R_C01 10
-#define R_C02 9
-#define R_C03 7
+#define R_C01 3
+#define R_C02 4
+#define R_C03 5
 #define R_C04 6
-#define R_C05 5
-#define R_C06 4
-#define R_C07 3
+#define R_C05 7
+#define R_C06 9
+#define R_C07 10
 #define R_R01 14
 #define R_R02 17
 #define R_R03 18

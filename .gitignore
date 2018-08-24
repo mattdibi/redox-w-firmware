@@ -3,3 +3,6 @@
 *.map
 *.bin
 *.out
+
+# Add precompiled .hex
+!precompiled/*.hex

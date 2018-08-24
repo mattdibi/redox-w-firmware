@@ -177,11 +177,13 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
         {
             nrf_drv_rtc_disable(&rtc_maint);
             nrf_drv_rtc_disable(&rtc_deb);
-            nrf_gpio_pin_set(R01);
-            nrf_gpio_pin_set(R02);
-            nrf_gpio_pin_set(R03);
-            nrf_gpio_pin_set(R04);
-            nrf_gpio_pin_set(R05);
+            nrf_gpio_pin_set(C01);
+            nrf_gpio_pin_set(C02);
+            nrf_gpio_pin_set(C03);
+            nrf_gpio_pin_set(C04);
+            nrf_gpio_pin_set(C05);
+            nrf_gpio_pin_set(C06);
+            nrf_gpio_pin_set(C07);
         }
 
     }
@@ -266,11 +268,13 @@ void GPIOTE_IRQHandler(void)
         nrf_drv_rtc_enable(&rtc_maint);
         nrf_drv_rtc_enable(&rtc_deb);
 
-        nrf_gpio_pin_clear(R01);
-        nrf_gpio_pin_clear(R02);
-        nrf_gpio_pin_clear(R03);
-        nrf_gpio_pin_clear(R04);
-        nrf_gpio_pin_clear(R05);
+        nrf_gpio_pin_clear(C01);
+        nrf_gpio_pin_clear(C02);
+        nrf_gpio_pin_clear(C03);
+        nrf_gpio_pin_clear(C04);
+        nrf_gpio_pin_clear(C05);
+        nrf_gpio_pin_clear(C06);
+        nrf_gpio_pin_clear(C07);
 
         //TODO: proper interrupt handling to avoid fake interrupts because of matrix scanning
         //debouncing = false;

@@ -8,18 +8,18 @@
 
 // left hand pins
 
-#define L_C01 6
-#define L_C02 5
-#define L_C03 4
-#define L_C04 3
-#define L_C05 2
-#define L_C06 0
-#define L_C07 30
-#define L_R01 28
-#define L_R02 23
-#define L_R03 22
-#define L_R04 21
-#define L_R05 29
+#define L_C01 10
+#define L_C02 9
+#define L_C03 7
+#define L_C04 6
+#define L_C05 5
+#define L_C06 4
+#define L_C07 3
+#define L_R01 19
+#define L_R02 18
+#define L_R03 17
+#define L_R04 14
+#define L_R05 13
 
 // right hand pins
 

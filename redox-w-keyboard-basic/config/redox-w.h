@@ -23,18 +23,18 @@
 
 // right hand pins
 
-#define R_C01 3
-#define R_C02 4
-#define R_C03 5
-#define R_C04 6
-#define R_C05 7
-#define R_C06 9
-#define R_C07 10
-#define R_R01 14
-#define R_R02 17
-#define R_R03 18
-#define R_R04 19
-#define R_R05 13
+#define R_C01 6
+#define R_C02 5
+#define R_C03 4
+#define R_C04 3
+#define R_C05 2
+#define R_C06 0
+#define R_C07 30
+#define R_R01 21
+#define R_R02 22
+#define R_R03 23
+#define R_R04 28
+#define R_R05 29
 
 #ifdef COMPILE_LEFT
 

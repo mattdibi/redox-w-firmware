@@ -52,13 +52,12 @@ sudo cp redox-w-firmware/49-stlinkv2.rules /etc/udev/rules.d/
 Plug in, or replug in the programmer after this.
 
 ## OpenOCD server
-The programming header on the side of the keyboard, from top to bottom:
-```
-SWCLK
-SWDIO
-GND
-3.3V
-```
+The programming header on the side of the keyboard:
+
+<p align="center">
+<img src="img/IMAG0596.jpg" alt="Redox-programming-headers" width="600"/>
+</p>
+
 It's best to remove the battery during long sessions of debugging, as charging non-rechargeable lithium batteries isn't recommended.
 
 Launch a debugging session with:

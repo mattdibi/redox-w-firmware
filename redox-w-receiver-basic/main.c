@@ -100,7 +100,7 @@ int main(void)
     // Load data into TX queue
     ack_payload[0] = 0x55;
     nrf_gzll_add_packet_to_tx_fifo(0, data_payload_left, TX_PAYLOAD_LENGTH);
-    nrf_gzll_add_packet_to_tx_fifo(1, data_payload_left, TX_PAYLOAD_LENGTH);
+    nrf_gzll_add_packet_to_tx_fifo(1, data_payload_right, TX_PAYLOAD_LENGTH);
 
     // Enable Gazell to start sending over the air
     nrf_gzll_enable();

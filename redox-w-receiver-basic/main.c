@@ -53,6 +53,7 @@ uint32_t left_active = 0;
 uint32_t right_active = 0;
 uint8_t c;
 
+static uint8_t channel_table[6]={4, 25, 42, 63, 77, 33};
 
 void uart_error_handle(app_uart_evt_t * p_event)
 {
@@ -92,6 +93,9 @@ int main(void)
 
     // Initialize Gazell
     nrf_gzll_init(NRF_GZLL_MODE_HOST);
+    nrf_gzll_set_channel_table(channel_table,6);
+    nrf_gzll_set_datarate(NRF_GZLL_DATARATE_1MBIT);
+    nrf_gzll_set_timeslot_period(900);
 
     // Addressing
     nrf_gzll_set_base_address_0(0x01020304);

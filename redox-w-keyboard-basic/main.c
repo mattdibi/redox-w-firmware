@@ -62,7 +62,7 @@ static void gpio_config(void)
 static void read_keys(void)
 {
     unsigned short c;
-    uint32_t input = 0;
+    volatile uint32_t input = 0;
     uint8_t row_stat[5] = {0, 0, 0, 0, 0};
 
     // scan matrix by columns

@@ -9,6 +9,8 @@
 #include "nrf_delay.h"
 #include "nrf_drv_clock.h"
 #include "nrf_drv_rtc.h"
+#include "nrf51_bitfields.h"
+#include "nrf51.h"
 
 
 /*****************************************************************************/

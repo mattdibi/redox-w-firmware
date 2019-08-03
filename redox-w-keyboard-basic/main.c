@@ -1,6 +1,6 @@
-
-// #define COMPILE_RIGHT
-#define COMPILE_LEFT
+/*
+ * Either COMPILE_RIGHT or COMPILE_LEFT has to be defined from the make call to allow proper functionality
+ */
 
 #include "redox-w.h"
 #include "nrf_drv_config.h"

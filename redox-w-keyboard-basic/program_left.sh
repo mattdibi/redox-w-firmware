@@ -1,12 +1,14 @@
 #!/bin/bash
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
 echo '=============================== MAKING ================================'
 cd custom/armgcc
-make
+make keyboard_side=left
 if [[ $? -ne 0 ]] ; then
     exit 0
 fi
 sleep 0.1
-HEX=`readlink -f _build/nrf51822_xxac.hex`
+HEX=`readlink -f "$SCRIPT_DIR/_build/nrf51822_xxac-keyboard-left.hex"`
 du -b $HEX
 
 echo
@@ -15,7 +17,7 @@ echo '============================= PROGRAMMING ============================='
 	echo "reset halt";
 	sleep 0.1;
 	echo "flash write_image erase" $HEX;
-	sleep 10;
+	sleep 11;
 	echo "reset";
 	sleep 0.1;
 	exit;

@@ -91,6 +91,15 @@ CFLAGS += -mfloat-abi=soft
 # keep every function in separate section. This will allow linker to dump unused functions
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
 CFLAGS += -fno-builtin --short-enums
+
+ifeq ("$(keyboard_side)","left") 
+CFLAGS += -DCOMPILE_LEFT 
+endif
+
+ifeq ("$(keyboard_side)","right") 
+CFLAGS += -DCOMPILE_RIGHT 
+endif
+
 # keep every function in separate section. This will allow linker to dump unused functions
 LDFLAGS += -Xlinker -Map=$(LISTING_DIRECTORY)/$(OUTPUT_FILENAME).map
 LDFLAGS += -mthumb -mabi=aapcs -L $(TEMPLATE_PATH) -T$(LINKER_SCRIPT)
@@ -135,7 +144,7 @@ vpath %.s $(ASM_PATHS)
 
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-nrf51822_xxac: OUTPUT_FILENAME := nrf51822_xxac
+nrf51822_xxac: OUTPUT_FILENAME := "nrf51822_xxac-keyboard-$(keyboard_side)"
 nrf51822_xxac: LINKER_SCRIPT=gzll_gcc_nrf51.ld
 
 nrf51822_xxac: $(BUILD_DIRECTORIES) $(OBJECTS)

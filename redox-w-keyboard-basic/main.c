@@ -1,6 +1,6 @@
-
-// #define COMPILE_RIGHT
-#define COMPILE_LEFT
+/*
+ * Either COMPILE_RIGHT or COMPILE_LEFT has to be defined from the make call to allow proper functionality
+ */
 
 #include "redox-w.h"
 #include "nrf_drv_config.h"
@@ -9,6 +9,8 @@
 #include "nrf_delay.h"
 #include "nrf_drv_clock.h"
 #include "nrf_drv_rtc.h"
+#include "nrf51_bitfields.h"
+#include "nrf51.h"
 
 
 /*****************************************************************************/
@@ -69,7 +71,7 @@ static void gpio_config(void)
 static void read_keys(void)
 {
     unsigned short c;
-    uint32_t input = 0;
+    volatile uint32_t input = 0;
     uint8_t row_stat[5] = {0, 0, 0, 0, 0};
 
     // scan matrix by columns

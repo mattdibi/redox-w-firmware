@@ -139,7 +139,7 @@ vpath %.s $(ASM_PATHS)
 
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-nrf51822_xxac: OUTPUT_FILENAME := nrf51822_xxac
+nrf51822_xxac: OUTPUT_FILENAME := nrf51822_xxac-receiver
 nrf51822_xxac: LINKER_SCRIPT=uart_gcc_nrf51.ld
 
 nrf51822_xxac: $(BUILD_DIRECTORIES) $(OBJECTS)

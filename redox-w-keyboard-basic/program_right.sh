@@ -3,12 +3,12 @@ SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 
 echo '=============================== MAKING ================================'
 cd custom/armgcc
-make
+make keyboard_side=right
 if [[ $? -ne 0 ]] ; then
     exit 0
 fi
 sleep 0.1
-HEX=`readlink -f "$SCRIPT_DIR/_build/nrf51822_xxac-receiver.hex"`
+HEX=`readlink -f "$SCRIPT_DIR/_build/nrf51822_xxac-keyboard-right.hex"`
 du -b $HEX
 
 echo

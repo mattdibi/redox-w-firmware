@@ -40,6 +40,13 @@ static volatile bool debouncing = false;
 // Debug helper variables
 static volatile bool init_ok, enable_ok, push_ok, pop_ok, tx_success;
 
+#ifdef COMPILE_LEFT
+static uint8_t channel_table[3]={4, 42, 77};
+#endif
+#ifdef COMPILE_RIGHT
+static uint8_t channel_table[3]={25, 63, 33};
+#endif
+
 // Setup switch pins with pullups
 static void gpio_config(void)
 {
@@ -225,6 +232,10 @@ int main()
 
     // Attempt sending every packet up to 100 times
     nrf_gzll_set_max_tx_attempts(100);
+    nrf_gzll_set_timeslots_per_channel(4);
+    nrf_gzll_set_channel_table(channel_table,3);
+    nrf_gzll_set_datarate(NRF_GZLL_DATARATE_1MBIT);
+    nrf_gzll_set_timeslot_period(900);
 
     // Addressing
     nrf_gzll_set_base_address_0(0x01020304);

@@ -1,6 +1,4 @@
 #!/bin/bash
-SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-
 echo '=============================== MAKING ================================'
 cd custom/armgcc
 make
@@ -8,7 +6,7 @@ if [[ $? -ne 0 ]] ; then
     exit 0
 fi
 sleep 0.1
-HEX=`readlink -f "$SCRIPT_DIR/_build/nrf51822_xxac-receiver.hex"`
+HEX=`readlink -f _build/nrf51822_xxac-receiver.hex`
 du -b $HEX
 
 echo

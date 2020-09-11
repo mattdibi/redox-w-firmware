@@ -33,12 +33,7 @@ static uint8_t ack_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH]; ///< Placeholder 
 #define ACTIVITY 500
 
 // Key buffers
-static uint8_t keys[ROWS], keys_snapshot[ROWS], keys_buffer[ROWS];
-static uint32_t debounce_ticks, activity_ticks;
-static volatile bool debouncing = false;
-
-// Debug helper variables
-static volatile bool init_ok, enable_ok, push_ok, pop_ok, tx_success;
+static uint8_t keys[ROWS], keys_snapshot[ROWS];
 
 #ifdef COMPILE_LEFT
 static uint8_t channel_table[3]={4, 42, 77};
@@ -66,11 +61,10 @@ static void gpio_config(void)
 }
 
 // Return the key states
-static void read_keys(void)
+static void read_keys(uint8_t *row_stat)
 {
     unsigned short c;
     uint32_t input = 0;
-    uint8_t row_stat[5] = {0, 0, 0, 0, 0};
     static const uint32_t COL_PINS[] = { C01, C02, C03, C04, C05, C06, C07 };
 
     // scan matrix by columns
@@ -94,13 +88,6 @@ static void read_keys(void)
         nrf_gpio_pin_clear(COL_PINS[c]);
     }
 
-    keys_buffer[0] = row_stat[0];
-    keys_buffer[1] = row_stat[1];
-    keys_buffer[2] = row_stat[2];
-    keys_buffer[3] = row_stat[3];
-    keys_buffer[4] = row_stat[4];
-
-    return;
 }
 
 static bool compare_keys(uint8_t* first, uint8_t* second, uint32_t size)
@@ -115,7 +102,7 @@ static bool compare_keys(uint8_t* first, uint8_t* second, uint32_t size)
     return true;
 }
 
-static bool empty_keys(void)
+static bool empty_keys(const uint8_t* keys_buffer)
 {
     for(int i=0; i < ROWS; i++)
     {
@@ -146,7 +133,11 @@ static void handler_maintenance(nrf_drv_rtc_int_type_t int_type)
 // 1000Hz debounce sampling
 static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
 {
-    read_keys();
+    static volatile bool debouncing = false;
+    static uint32_t debounce_ticks = 0, activity_ticks = 0;
+
+    uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
+    read_keys(keys_buffer);
 
     // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
     if (debouncing)
@@ -187,7 +178,7 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
     }
 
     // looking for 500 ticks of no keys pressed, to go back to deep sleep
-    if (empty_keys())
+    if (empty_keys(keys_buffer))
     {
         activity_ticks++;
         if (activity_ticks > ACTIVITY)
@@ -201,6 +192,8 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
             nrf_gpio_pin_set(C05);
             nrf_gpio_pin_set(C06);
             nrf_gpio_pin_set(C07);
+
+            activity_ticks = 0;
         }
 
     }
@@ -296,11 +289,6 @@ void GPIOTE_IRQHandler(void)
         nrf_gpio_pin_clear(C05);
         nrf_gpio_pin_clear(C06);
         nrf_gpio_pin_clear(C07);
-
-        //TODO: proper interrupt handling to avoid fake interrupts because of matrix scanning
-        //debouncing = false;
-        //debounce_ticks = 0;
-        activity_ticks = 0;
     }
 }
 

@@ -17,7 +17,6 @@
 /** Configuration */
 /*****************************************************************************/
 
-const nrf_drv_rtc_t rtc_maint = NRF_DRV_RTC_INSTANCE(0); /**< Declaring an instance of nrf_drv_rtc for RTC0. */
 const nrf_drv_rtc_t rtc_deb = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
 
 
@@ -125,9 +124,14 @@ static void send_data(void)
 }
 
 // 8Hz held key maintenance, keeping the reciever keystates valid
-static void handler_maintenance(nrf_drv_rtc_int_type_t int_type)
+static void handle_maintenance()
 {
-    send_data();
+    static int counter = 0;
+    counter++;
+    if (counter == 125) {
+        send_data();
+        counter = 0;
+    }
 }
 
 // 1000Hz debounce sampling
@@ -138,6 +142,8 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
 
     uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
     read_keys(keys_buffer);
+
+    handle_maintenance();
 
     // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
     if (debouncing)
@@ -183,7 +189,6 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
         activity_ticks++;
         if (activity_ticks > ACTIVITY)
         {
-            nrf_drv_rtc_disable(&rtc_maint);
             nrf_drv_rtc_disable(&rtc_deb);
             nrf_gpio_pin_set(C01);
             nrf_gpio_pin_set(C02);
@@ -216,15 +221,12 @@ static void lfclk_config(void)
 static void rtc_config(void)
 {
     //Initialize RTC instance
-    nrf_drv_rtc_init(&rtc_maint, NULL, handler_maintenance);
     nrf_drv_rtc_init(&rtc_deb, NULL, handler_debounce);
 
     //Enable tick event & interrupt
-    nrf_drv_rtc_tick_enable(&rtc_maint,true);
     nrf_drv_rtc_tick_enable(&rtc_deb,true);
 
     //Power on RTC instance
-    nrf_drv_rtc_enable(&rtc_maint);
     nrf_drv_rtc_enable(&rtc_deb);
 }
 
@@ -279,7 +281,6 @@ void GPIOTE_IRQHandler(void)
         NRF_GPIOTE->EVENTS_PORT = 0;
 
         //enable rtc interupt triggers
-        nrf_drv_rtc_enable(&rtc_maint);
         nrf_drv_rtc_enable(&rtc_deb);
 
         nrf_gpio_pin_clear(C01);

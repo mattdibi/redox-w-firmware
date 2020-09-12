@@ -29,7 +29,8 @@ static uint8_t ack_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH]; ///< Placeholder 
 
 // Debounce time (dependent on tick frequency)
 #define DEBOUNCE 5
-#define ACTIVITY 500
+// Mark as inactive after a number of ticks:
+#define INACTIVITY_THRESHOLD 500 // 0.5sec
 
 // Key buffers
 static uint8_t keys[ROWS], keys_snapshot[ROWS];
@@ -134,14 +135,47 @@ static void handle_maintenance()
     }
 }
 
+static bool handle_inactivity(const uint8_t *keys_buffer)
+{
+    static uint32_t inactivity_ticks = 0;
+
+    // looking for 500 ticks of no keys pressed, to go back to deep sleep
+    if (empty_keys(keys_buffer)) {
+        inactivity_ticks++;
+        if (inactivity_ticks > INACTIVITY_THRESHOLD) {
+            nrf_drv_rtc_disable(&rtc_deb);
+            nrf_gpio_pin_set(C01);
+            nrf_gpio_pin_set(C02);
+            nrf_gpio_pin_set(C03);
+            nrf_gpio_pin_set(C04);
+            nrf_gpio_pin_set(C05);
+            nrf_gpio_pin_set(C06);
+            nrf_gpio_pin_set(C07);
+
+            inactivity_ticks = 0;
+
+            return true;
+        }
+    } else {
+        inactivity_ticks = 0;
+    }
+
+    return false;
+}
+
 // 1000Hz debounce sampling
 static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
 {
     static volatile bool debouncing = false;
-    static uint32_t debounce_ticks = 0, activity_ticks = 0;
+    static uint32_t debounce_ticks = 0;
 
     uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
     read_keys(keys_buffer);
+
+    bool is_inactive = handle_inactivity(keys_buffer);
+    if (is_inactive) {
+        return;
+    }
 
     handle_maintenance();
 
@@ -182,31 +216,6 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
             debounce_ticks = 0;
         }
     }
-
-    // looking for 500 ticks of no keys pressed, to go back to deep sleep
-    if (empty_keys(keys_buffer))
-    {
-        activity_ticks++;
-        if (activity_ticks > ACTIVITY)
-        {
-            nrf_drv_rtc_disable(&rtc_deb);
-            nrf_gpio_pin_set(C01);
-            nrf_gpio_pin_set(C02);
-            nrf_gpio_pin_set(C03);
-            nrf_gpio_pin_set(C04);
-            nrf_gpio_pin_set(C05);
-            nrf_gpio_pin_set(C06);
-            nrf_gpio_pin_set(C07);
-
-            activity_ticks = 0;
-        }
-
-    }
-    else
-    {
-        activity_ticks = 0;
-    }
-
 }
 
 // Low frequency clock configuration

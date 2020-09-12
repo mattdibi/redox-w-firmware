@@ -33,7 +33,7 @@ static uint8_t ack_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH]; ///< Placeholder 
 #define INACTIVITY_THRESHOLD 500 // 0.5sec
 
 // Key buffers
-static uint8_t keys[ROWS], keys_snapshot[ROWS];
+static uint8_t keys[ROWS];
 
 #ifdef COMPILE_LEFT
 static uint8_t channel_table[3]={4, 42, 77};
@@ -166,37 +166,26 @@ static bool handle_inactivity(const uint8_t *keys_buffer)
 
 static void handle_send(const uint8_t* keys_buffer)
 {
-    static volatile bool debouncing = false;
+    static uint8_t keys_snapshot[ROWS] = {0};
     static uint32_t debounce_ticks = 0;
 
-    // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
-    if (debouncing) {
-        // if debouncing, check if current keystates equal to the snapshot
-        if (compare_keys(keys_snapshot, keys_buffer, ROWS)) {
-            // DEBOUNCE ticks of stable sampling needed before sending data
-            debounce_ticks++;
-            if (debounce_ticks == DEBOUNCE) {
-                for (int j = 0; j < ROWS; j++) {
-                    keys[j] = keys_snapshot[j];
-                }
-                send_data();
-
-                debouncing = false;
-                debounce_ticks = 0;
+    const bool no_change = compare_keys(keys_buffer, keys_snapshot, ROWS);
+    if (no_change) {
+        debounce_ticks++;
+        // debouncing - send only if the keys state has been stable
+        // for DEBOUNCE ticks
+        if (debounce_ticks == DEBOUNCE) {
+            for (int j = 0; j < ROWS; j++) {
+                keys[j] = keys_snapshot[j];
             }
-        } else {
-            // if keys change, start period again
-            debouncing = false;
+            send_data();
+            debounce_ticks = 0;
         }
     } else {
-        // if the keystate is different from the last data
-        // sent to the receiver, start debouncing
-        if (!compare_keys(keys, keys_buffer, ROWS)) {
-            for (int k = 0; k < ROWS; k++) {
-                keys_snapshot[k] = keys_buffer[k];
-            }
-            debouncing = true;
-            debounce_ticks = 0;
+        // change detected, start over
+        debounce_ticks = 0;
+        for (int k = 0; k < ROWS; k++) {
+            keys_snapshot[k] = keys_buffer[k];
         }
     }
 }

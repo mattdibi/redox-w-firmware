@@ -17,7 +17,7 @@
 /** Configuration */
 /*****************************************************************************/
 
-const nrf_drv_rtc_t rtc_deb = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
+const nrf_drv_rtc_t rtc = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
 
 
 // Define payload length
@@ -143,7 +143,7 @@ static bool handle_inactivity(const uint8_t *keys_buffer)
     if (empty_keys(keys_buffer)) {
         inactivity_ticks++;
         if (inactivity_ticks > INACTIVITY_THRESHOLD) {
-            nrf_drv_rtc_disable(&rtc_deb);
+            nrf_drv_rtc_disable(&rtc);
             nrf_gpio_pin_set(C01);
             nrf_gpio_pin_set(C02);
             nrf_gpio_pin_set(C03);
@@ -164,7 +164,7 @@ static bool handle_inactivity(const uint8_t *keys_buffer)
 }
 
 // 1000Hz debounce sampling
-static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
+static void tick(nrf_drv_rtc_int_type_t int_type)
 {
     static volatile bool debouncing = false;
     static uint32_t debounce_ticks = 0;
@@ -230,13 +230,13 @@ static void lfclk_config(void)
 static void rtc_config(void)
 {
     //Initialize RTC instance
-    nrf_drv_rtc_init(&rtc_deb, NULL, handler_debounce);
+    nrf_drv_rtc_init(&rtc, NULL, tick);
 
     //Enable tick event & interrupt
-    nrf_drv_rtc_tick_enable(&rtc_deb,true);
+    nrf_drv_rtc_tick_enable(&rtc, true);
 
     //Power on RTC instance
-    nrf_drv_rtc_enable(&rtc_deb);
+    nrf_drv_rtc_enable(&rtc);
 }
 
 int main()
@@ -290,7 +290,7 @@ void GPIOTE_IRQHandler(void)
         NRF_GPIOTE->EVENTS_PORT = 0;
 
         //enable rtc interupt triggers
-        nrf_drv_rtc_enable(&rtc_deb);
+        nrf_drv_rtc_enable(&rtc);
 
         nrf_gpio_pin_clear(C01);
         nrf_gpio_pin_clear(C02);

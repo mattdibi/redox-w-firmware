@@ -90,7 +90,8 @@ static void read_keys(uint8_t *row_stat)
 
 }
 
-static bool compare_keys(uint8_t* first, uint8_t* second, uint32_t size)
+static bool compare_keys(const uint8_t* first, const uint8_t* second,
+                         uint32_t size)
 {
     for(int i=0; i < size; i++)
     {
@@ -163,12 +164,46 @@ static bool handle_inactivity(const uint8_t *keys_buffer)
     return false;
 }
 
-// 1000Hz debounce sampling
-static void tick(nrf_drv_rtc_int_type_t int_type)
+static void handle_send(const uint8_t* keys_buffer)
 {
     static volatile bool debouncing = false;
     static uint32_t debounce_ticks = 0;
 
+    // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
+    if (debouncing) {
+        // if debouncing, check if current keystates equal to the snapshot
+        if (compare_keys(keys_snapshot, keys_buffer, ROWS)) {
+            // DEBOUNCE ticks of stable sampling needed before sending data
+            debounce_ticks++;
+            if (debounce_ticks == DEBOUNCE) {
+                for (int j = 0; j < ROWS; j++) {
+                    keys[j] = keys_snapshot[j];
+                }
+                send_data();
+
+                debouncing = false;
+                debounce_ticks = 0;
+            }
+        } else {
+            // if keys change, start period again
+            debouncing = false;
+        }
+    } else {
+        // if the keystate is different from the last data
+        // sent to the receiver, start debouncing
+        if (!compare_keys(keys, keys_buffer, ROWS)) {
+            for (int k = 0; k < ROWS; k++) {
+                keys_snapshot[k] = keys_buffer[k];
+            }
+            debouncing = true;
+            debounce_ticks = 0;
+        }
+    }
+}
+
+// 1000Hz debounce sampling
+static void tick(nrf_drv_rtc_int_type_t int_type)
+{
     uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
     read_keys(keys_buffer);
 
@@ -178,44 +213,7 @@ static void tick(nrf_drv_rtc_int_type_t int_type)
     }
 
     handle_maintenance();
-
-    // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
-    if (debouncing)
-    {
-        // if debouncing, check if current keystates equal to the snapshot
-        if (compare_keys(keys_snapshot, keys_buffer, ROWS))
-        {
-            // DEBOUNCE ticks of stable sampling needed before sending data
-            debounce_ticks++;
-            if (debounce_ticks == DEBOUNCE)
-            {
-                for(int j=0; j < ROWS; j++)
-                {
-                    keys[j] = keys_snapshot[j];
-                }
-                send_data();
-            }
-        }
-        else
-        {
-            // if keys change, start period again
-            debouncing = false;
-        }
-    }
-    else
-    {
-        // if the keystate is different from the last data
-        // sent to the receiver, start debouncing
-        if (!compare_keys(keys, keys_buffer, ROWS))
-        {
-            for(int k=0; k < ROWS; k++)
-            {
-                keys_snapshot[k] = keys_buffer[k];
-            }
-            debouncing = true;
-            debounce_ticks = 0;
-        }
-    }
+    handle_send(keys_buffer);
 }
 
 // Low frequency clock configuration

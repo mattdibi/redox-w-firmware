@@ -125,17 +125,6 @@ static void send_data(void)
     nrf_gzll_add_packet_to_tx_fifo(PIPE_NUMBER, data_payload, TX_PAYLOAD_LENGTH);
 }
 
-// 8Hz held key maintenance, keeping the reciever keystates valid
-static void handle_maintenance()
-{
-    static int counter = 0;
-    counter++;
-    if (counter == 125) {
-        send_data();
-        counter = 0;
-    }
-}
-
 static bool handle_inactivity(const uint8_t *keys_buffer)
 {
     static uint32_t inactivity_ticks = 0;
@@ -201,7 +190,6 @@ static void tick(nrf_drv_rtc_int_type_t int_type)
         return;
     }
 
-    handle_maintenance();
     handle_send(keys_buffer);
 }
 

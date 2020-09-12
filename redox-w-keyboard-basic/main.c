@@ -20,20 +20,13 @@
 const nrf_drv_rtc_t rtc = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
 
 
-// Define payload length
-#define TX_PAYLOAD_LENGTH ROWS ///< 5 byte payload length when transmitting
-
 // Data and acknowledgement payloads
-static uint8_t data_payload[TX_PAYLOAD_LENGTH];                ///< Payload to send to Host.
 static uint8_t ack_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH]; ///< Placeholder for received ACK payloads from Host.
 
 // Debounce time (dependent on tick frequency)
 #define DEBOUNCE 5
 // Mark as inactive after a number of ticks:
 #define INACTIVITY_THRESHOLD 500 // 0.5sec
-
-// Key buffers
-static uint8_t keys[ROWS];
 
 #ifdef COMPILE_LEFT
 static uint8_t channel_table[3]={4, 42, 77};
@@ -115,16 +108,6 @@ static bool empty_keys(const uint8_t* keys_buffer)
     return true;
 }
 
-// Assemble packet and send to receiver
-static void send_data(void)
-{
-    for(int i=0; i < ROWS; i++)
-    {
-        data_payload[i] = keys[i];
-    }
-    nrf_gzll_add_packet_to_tx_fifo(PIPE_NUMBER, data_payload, TX_PAYLOAD_LENGTH);
-}
-
 static bool handle_inactivity(const uint8_t *keys_buffer)
 {
     static uint32_t inactivity_ticks = 0;
@@ -164,10 +147,8 @@ static void handle_send(const uint8_t* keys_buffer)
         // debouncing - send only if the keys state has been stable
         // for DEBOUNCE ticks
         if (debounce_ticks == DEBOUNCE) {
-            for (int j = 0; j < ROWS; j++) {
-                keys[j] = keys_snapshot[j];
-            }
-            send_data();
+            // Assemble packet and send to receiver
+            nrf_gzll_add_packet_to_tx_fifo(PIPE_NUMBER, keys_snapshot, ROWS);
             debounce_ticks = 0;
         }
     } else {

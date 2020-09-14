@@ -25,8 +25,6 @@
 #define TX_PAYLOAD_LENGTH 5 ///< 5 byte payload length
 
 // ticks for inactive keyboard
-#define INACTIVE 100000
-
 // Binary printing
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)  \
@@ -48,9 +46,6 @@ static uint8_t data_buffer[10];
 // Debug helper variables
 extern nrf_gzll_error_code_t nrf_gzll_error_code;   ///< Error code
 static bool init_ok, enable_ok, push_ok, pop_ok, packet_received_left, packet_received_right;
-uint32_t left_active = 0;
-uint32_t right_active = 0;
-uint8_t c;
 
 static uint8_t channel_table[6]={4, 25, 42, 63, 77, 33};
 
@@ -130,6 +125,7 @@ int main(void)
         }
 
         // checking for a poll request from QMK
+        uint8_t c;
         if (app_uart_get(&c) == NRF_SUCCESS && c == 's')
         {
             // sending data to QMK, and an end byte
@@ -157,29 +153,6 @@ int main(void)
         }
         // allowing UART buffers to clear
         nrf_delay_us(10);
-
-        // if no packets recieved from keyboards in a few seconds, assume either
-        // out of range, or sleeping due to no keys pressed, update keystates to off
-        left_active++;
-        right_active++;
-        if (left_active > INACTIVE)
-        {
-            data_buffer[0] = 0;
-            data_buffer[2] = 0;
-            data_buffer[4] = 0;
-            data_buffer[6] = 0;
-            data_buffer[8] = 0;
-            left_active = 0;
-        }
-        if (right_active > INACTIVE)
-        {
-            data_buffer[1] = 0;
-            data_buffer[3] = 0;
-            data_buffer[5] = 0;
-            data_buffer[7] = 0;
-            data_buffer[9] = 0;
-            right_active = 0;
-        }
     }
 }
 
@@ -197,14 +170,12 @@ void nrf_gzll_host_rx_data_ready(uint32_t pipe, nrf_gzll_host_rx_info_t rx_info)
     if (pipe == 0)
     {
         packet_received_left = true;
-        left_active = 0;
         // Pop packet and write first byte of the payload to the GPIO port.
         nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_left, &data_payload_length);
     }
     else if (pipe == 1)
     {
         packet_received_right = true;
-        right_active = 0;
         // Pop packet and write first byte of the payload to the GPIO port.
         nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_right, &data_payload_length);
     }

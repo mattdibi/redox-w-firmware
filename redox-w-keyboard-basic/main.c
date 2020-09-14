@@ -116,7 +116,7 @@ static bool empty_keys(const uint8_t* keys_buffer)
     return true;
 }
 
-static bool handle_inactivity(const uint8_t *keys_buffer)
+static void handle_inactivity(const uint8_t *keys_buffer)
 {
     static uint32_t inactivity_ticks = 0;
 
@@ -136,14 +136,10 @@ static bool handle_inactivity(const uint8_t *keys_buffer)
             inactivity_ticks = 0;
 
             NRF_POWER->SYSTEMOFF = 1;
-
-            return true;
         }
     } else {
         inactivity_ticks = 0;
     }
-
-    return false;
 }
 
 static void handle_send(const uint8_t* keys_buffer)
@@ -176,10 +172,7 @@ static void tick(nrf_drv_rtc_int_type_t int_type)
     uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
     read_keys(keys_buffer);
 
-    bool is_inactive = handle_inactivity(keys_buffer);
-    if (is_inactive) {
-        return;
-    }
+    handle_inactivity(keys_buffer);
 
     handle_send(keys_buffer);
 }

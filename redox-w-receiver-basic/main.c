@@ -43,7 +43,6 @@
 // Data and acknowledgement payloads
 static uint8_t data_payload_left[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host.
 static uint8_t data_payload_right[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host.
-static uint8_t ack_payload[TX_PAYLOAD_LENGTH];                   ///< Payload to attach to ACK sent to device.
 static uint8_t data_buffer[10];
 
 // Debug helper variables
@@ -100,11 +99,6 @@ int main(void)
     // Addressing
     nrf_gzll_set_base_address_0(0x01020304);
     nrf_gzll_set_base_address_1(0x05060708);
-
-    // Load data into TX queue
-    ack_payload[0] = 0x55;
-    nrf_gzll_add_packet_to_tx_fifo(0, data_payload_left, TX_PAYLOAD_LENGTH);
-    nrf_gzll_add_packet_to_tx_fifo(1, data_payload_right, TX_PAYLOAD_LENGTH);
 
     // Enable Gazell to start sending over the air
     nrf_gzll_enable();
@@ -214,11 +208,4 @@ void nrf_gzll_host_rx_data_ready(uint32_t pipe, nrf_gzll_host_rx_info_t rx_info)
         // Pop packet and write first byte of the payload to the GPIO port.
         nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_right, &data_payload_length);
     }
-
-    // not sure if required, I guess if enough packets are missed during blocking uart
-    nrf_gzll_flush_rx_fifo(pipe);
-
-    //load ACK payload into TX queue
-    ack_payload[0] =  0x55;
-    nrf_gzll_add_packet_to_tx_fifo(pipe, ack_payload, TX_PAYLOAD_LENGTH);
 }

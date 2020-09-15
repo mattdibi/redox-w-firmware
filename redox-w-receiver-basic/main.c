@@ -22,7 +22,9 @@
 
 
 // Define payload length
-#define TX_PAYLOAD_LENGTH 5 ///< 5 byte payload length
+#define PAYLOAD_LENGTH 5 ///< 5 byte payload length
+
+#define MATRIX_ROWS 10
 
 // ticks for inactive keyboard
 // Binary printing
@@ -38,14 +40,9 @@
   (byte & 0x01 ? '#' : '.')
 
 
-// Data and acknowledgement payloads
-static uint8_t data_payload_left[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host.
-static uint8_t data_payload_right[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH];  ///< Placeholder for data payload received from host.
-static uint8_t data_buffer[10];
-
 // Debug helper variables
 extern nrf_gzll_error_code_t nrf_gzll_error_code;   ///< Error code
-static bool init_ok, enable_ok, push_ok, pop_ok, packet_received_left, packet_received_right;
+static bool init_ok, enable_ok, push_ok, pop_ok;
 
 static uint8_t channel_table[6]={4, 25, 42, 63, 77, 33};
 
@@ -98,30 +95,24 @@ int main(void)
     // Enable Gazell to start sending over the air
     nrf_gzll_enable();
 
+    uint8_t matrix[MATRIX_ROWS] = {0};
+
     // main loop
     while (true)
     {
-        // detecting received packet from interupt, and unpacking
-        if (packet_received_left)
-        {
-            packet_received_left = false;
+        for (int pipe = 0; pipe < 2; pipe++) {
+            if (!nrf_gzll_get_rx_fifo_packet_count(pipe)) {
+                continue;
+            }
 
-            data_buffer[0] = data_payload_left[0];
-            data_buffer[2] = data_payload_left[1];
-            data_buffer[4] = data_payload_left[2];
-            data_buffer[6] = data_payload_left[3];
-            data_buffer[8] = data_payload_left[4];
-        }
-
-        if (packet_received_right)
-        {
-            packet_received_right = false;
-
-            data_buffer[1] = data_payload_right[0];
-            data_buffer[3] = data_payload_right[1];
-            data_buffer[5] = data_payload_right[2];
-            data_buffer[7] = data_payload_right[3];
-            data_buffer[9] = data_payload_right[4];
+            uint32_t payload_len = PAYLOAD_LENGTH;
+            uint8_t payload[PAYLOAD_LENGTH];
+            bool ret = nrf_gzll_fetch_packet_from_rx_fifo(pipe, payload, &payload_len);
+            if (ret && payload_len == PAYLOAD_LENGTH) {
+                for (int i = 0; i < PAYLOAD_LENGTH; i++) {
+                    matrix[i * 2 + pipe] = payload[i];
+                }
+            }
         }
 
         // checking for a poll request from QMK
@@ -129,7 +120,7 @@ int main(void)
         if (app_uart_get(&c) == NRF_SUCCESS && c == 's')
         {
             // sending data to QMK, and an end byte
-            nrf_drv_uart_tx(data_buffer,10);
+            nrf_drv_uart_tx(matrix, 10);
             app_uart_put(0xE0);
 
             // debugging help, for printing keystates to a serial console
@@ -161,22 +152,4 @@ int main(void)
 void nrf_gzll_device_tx_success(uint32_t pipe, nrf_gzll_device_tx_info_t tx_info) {}
 void nrf_gzll_device_tx_failed(uint32_t pipe, nrf_gzll_device_tx_info_t tx_info) {}
 void nrf_gzll_disabled() {}
-
-// If a data packet was received, identify half, and throw flag
-void nrf_gzll_host_rx_data_ready(uint32_t pipe, nrf_gzll_host_rx_info_t rx_info)
-{
-    uint32_t data_payload_length = NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH;
-
-    if (pipe == 0)
-    {
-        packet_received_left = true;
-        // Pop packet and write first byte of the payload to the GPIO port.
-        nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_left, &data_payload_length);
-    }
-    else if (pipe == 1)
-    {
-        packet_received_right = true;
-        // Pop packet and write first byte of the payload to the GPIO port.
-        nrf_gzll_fetch_packet_from_rx_fifo(pipe, data_payload_right, &data_payload_length);
-    }
-}
+void nrf_gzll_host_rx_data_ready(uint32_t pipe, nrf_gzll_host_rx_info_t rx_info) {}

@@ -51,6 +51,14 @@ static void gpio_config(void)
     nrf_gpio_cfg_output(C05);
     nrf_gpio_cfg_output(C06);
     nrf_gpio_cfg_output(C07);
+
+    nrf_gpio_pin_clear(C01);
+    nrf_gpio_pin_clear(C02);
+    nrf_gpio_pin_clear(C03);
+    nrf_gpio_pin_clear(C04);
+    nrf_gpio_pin_clear(C05);
+    nrf_gpio_pin_clear(C06);
+    nrf_gpio_pin_clear(C07);
 }
 
 // Return the key states
@@ -126,6 +134,8 @@ static bool handle_inactivity(const uint8_t *keys_buffer)
             nrf_gpio_pin_set(C07);
 
             inactivity_ticks = 0;
+
+            NRF_POWER->SYSTEMOFF = 1;
 
             return true;
         }
@@ -223,11 +233,6 @@ int main()
     // Configure all keys as inputs with pullups
     gpio_config();
 
-    // Set the GPIOTE PORT event as interrupt source, and enable interrupts for GPIOTE
-    NRF_GPIOTE->INTENSET = GPIOTE_INTENSET_PORT_Msk;
-    NVIC_EnableIRQ(GPIOTE_IRQn);
-
-
     // Main loop, constantly sleep, waiting for RTC and gpio IRQs
     while(1)
     {
@@ -236,28 +241,6 @@ int main()
         __WFE();
     }
 }
-
-// This handler will be run after wakeup from system ON (GPIO wakeup)
-void GPIOTE_IRQHandler(void)
-{
-    if(NRF_GPIOTE->EVENTS_PORT)
-    {
-        //clear wakeup event
-        NRF_GPIOTE->EVENTS_PORT = 0;
-
-        //enable rtc interupt triggers
-        nrf_drv_rtc_enable(&rtc);
-
-        nrf_gpio_pin_clear(C01);
-        nrf_gpio_pin_clear(C02);
-        nrf_gpio_pin_clear(C03);
-        nrf_gpio_pin_clear(C04);
-        nrf_gpio_pin_clear(C05);
-        nrf_gpio_pin_clear(C06);
-        nrf_gpio_pin_clear(C07);
-    }
-}
-
 
 
 /*****************************************************************************/

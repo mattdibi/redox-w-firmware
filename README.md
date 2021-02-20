@@ -11,20 +11,12 @@ For additional information about the Redox keyboard visit:
 
 **Requirements:** Linux-based distro (macOS should work but wasn't tested), Docker and Docker-compose installed.
 
-#### Build the Openocd image
+#### Build the two container images
 
 From inside the `redox-w-firmware` folder run:
 
 ```
-docker build -t redox-fw-openocd:latest --target redox-fw-openocd .
-```
-
-#### Build the toolchain image
-
-From inside the `redox-w-firmware` folder run:
-
-```
-docker build -t redox-fw-toolchain:latest --target redox-fw-toolchain .
+docker-compose build
 ```
 
 #### Run the two images using docker compose
@@ -49,7 +41,7 @@ $ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-keyb
 
 #### Stop the containers
 
-To stop the two running containers run:
+To stop the two running containers, from inside the `redox-w-firmware` folder run:
 
 ```
 docker-compose down

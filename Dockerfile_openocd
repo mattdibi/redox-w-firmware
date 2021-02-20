@@ -1,0 +1,15 @@
+# -----------------------------------
+# -------- OPENOCD SERVER -----------
+# -----------------------------------
+FROM ubuntu:16.04
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    openocd
+
+# Expose port
+EXPOSE 4444
+
+CMD openocd -s /usr/local/Cellar/open-ocd/0.8.0/share/openocd/scripts/ \
+    -f interface/stlink-v2.cfg \
+    -f target/nrf51_stlink.tcl

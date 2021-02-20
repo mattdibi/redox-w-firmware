@@ -40,6 +40,18 @@ After connecting the STLinkV2 debugger, from inside the `redox-w-firmware` folde
 $ docker-compose up -d
 ```
 
+You should see the two containers running:
+
+```
+$ docker-compose up -d
+Creating redox-w-firmware_openocd_1 ... done
+Creating redox-w-firmware_toolchain_1 ... done
+$ docker ps
+CONTAINER ID   IMAGE                       COMMAND                  CREATED         STATUS         PORTS     NAMES
+84f606ad7e25   redox-fw-toolchain:latest   "tail -f /dev/null"      4 seconds ago   Up 3 seconds             redox-w-firmware_toolchain_1
+8d0d6b5da95a   redox-fw-openocd:latest     "/bin/sh -c 'openocd…"   4 seconds ago   Up 3 seconds             redox-w-firmware_openocd_1
+```
+
 You can now start making changes in the code.
 
 #### Build and upload the firmware

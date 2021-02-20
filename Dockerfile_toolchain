@@ -22,3 +22,5 @@ WORKDIR /usr/src/nRF5_SDK_11
 # Toolchain setup
 RUN sed -i "s/\/usr\/local\/gcc-arm-none-eabi-4_9-2015q1/\/usr\//" \
     components/toolchain/gcc/Makefile.posix
+
+CMD tail -f /dev/null

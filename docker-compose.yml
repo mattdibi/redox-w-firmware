@@ -18,4 +18,3 @@ services:
     network_mode: host
     depends_on:
         - openocd
-    command: tail -f /dev/null

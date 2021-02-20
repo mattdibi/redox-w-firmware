@@ -9,7 +9,10 @@ For additional information about the Redox keyboard visit:
 
 ## Install Docker-based development environment (WIP)
 
-**Requirements:** Linux-based distro (macOS should work but wasn't tested), Docker and Docker-compose installed.
+**Requirements:**
+- Linux-based distro (macOS should work but wasn't tested)
+- [Docker](https://docs.docker.com/get-docker/)
+- [Docker-compose](https://docs.docker.com/compose/install/)
 
 #### Build the two container images
 

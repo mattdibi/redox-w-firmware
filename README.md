@@ -34,9 +34,9 @@ You can now start making changes in the code.
 After you're satisfied with your changes you can build and upload the firmware by issuing the following:
 
 ```
-$ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-receiver-basic/program.sh
-$ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-keyboard-basic/program_right.sh
-$ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-keyboard-basic/program_left.sh
+$ docker exec -it redox-w-firmware_toolchain_1 ./redox-w-firmware/redox-w-receiver-basic/program.sh
+$ docker exec -it redox-w-firmware_toolchain_1 ./redox-w-firmware/redox-w-keyboard-basic/program_right.sh
+$ docker exec -it redox-w-firmware_toolchain_1 ./redox-w-firmware/redox-w-keyboard-basic/program_left.sh
 ```
 
 #### Stop the containers

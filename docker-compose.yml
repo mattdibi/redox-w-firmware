@@ -1,0 +1,20 @@
+version: "2.4"
+services:
+  # OpenOCD server
+  openocd:
+    build:
+        context: .
+        dockerfile: Dockerfile_openocd
+    image: redox-fw-openocd:latest
+    network_mode: host
+    devices:
+      - "/dev/bus"
+  # Nordic SDK toolchain
+  toolchain:
+    build:
+        context: .
+        dockerfile: Dockerfile_toolchain
+    image: redox-fw-toolchain:latest
+    network_mode: host
+    depends_on:
+        - openocd

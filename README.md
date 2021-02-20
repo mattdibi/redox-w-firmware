@@ -7,7 +7,7 @@ For additional information about the Redox keyboard visit:
 - [Redox's Github page](https://github.com/mattdibi/redox-keyboard)
 - [Redox's Hackaday page](https://hackaday.io/project/160610-redox-keyboard)
 
-## Docker-based development environment installation (WIP)
+## Docker-based development environment installation
 
 **Requirements:**
 - Linux-based distro (macOS should work but wasn't tested)

@@ -55,7 +55,7 @@ To stop the two running containers run:
 docker-compose down
 ```
 
-## Install dependencies
+## Install native development environment
 
 Tested on Ubuntu 16.04.2, but should be able to find alternatives on all distros.
 

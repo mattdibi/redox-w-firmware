@@ -32,7 +32,7 @@ docker build -t redox-fw-toolchain:latest -target redox-fw-toolchain .
 After connecting the STLinkV2 debugger, from inside the redox-w-firmware folder run:
 
 ```
-docker-compose up
+docker-compose up -d
 ```
 
 You can now start making changes in the code.

@@ -1,5 +1,5 @@
 # Redox Wireless Keyboard Firmware
-Firmware for Nordic MCUs used in the Redox wireless Keyboard, contains precompiled .hex files, as well as sources buildable with the Nordic SDK
+Firmware for Nordic MCUs used in the Redox wireless Keyboard, contains precompiled .hex files, as well as sources buildable with the Nordic SDK.
 This firmware was derived from [Reversebias' Mitosis](https://github.com/reversebias/mitosis) and [Durburz's Interphase](https://github.com/Durburz/interphase-firmware/) firmware.
 
 ## Redox's documentation page
@@ -7,7 +7,7 @@ For additional information about the Redox keyboard visit:
 - [Redox's Github page](https://github.com/mattdibi/redox-keyboard)
 - [Redox's Hackaday page](https://hackaday.io/project/160610-redox-keyboard)
 
-## Install Docker-based development environment (WIP)
+## Docker-based development environment installation (WIP)
 
 **Requirements:**
 - Linux-based distro (macOS should work but wasn't tested)
@@ -75,7 +75,7 @@ Removing redox-w-firmware_toolchain_1 ... done
 Removing redox-w-firmware_openocd_1   ... done
 ```
 
-## Install native development environment
+## Native development environment installation
 
 Tested on Ubuntu 16.04.2, but should be able to find alternatives on all distros.
 
@@ -83,7 +83,7 @@ Tested on Ubuntu 16.04.2, but should be able to find alternatives on all distros
 $ sudo apt install openocd gcc-arm-none-eabi
 ```
 
-## Download Nordic SDK
+#### Download Nordic SDK
 
 Nordic does not allow redistribution of their SDK or components, so download and extract from their site:
 
@@ -96,7 +96,7 @@ $ unzip nRF5_SDK_11.0.0_89a8197.zip -d nRF5_SDK_11
 $ cd nRF5_SDK_11
 ```
 
-## Toolchain set-up
+#### Toolchain set-up
 
 A cofiguration file that came with the SDK needs to be changed. Assuming you installed gcc-arm with apt, the compiler root path needs to be changed in /components/toolchain/gcc/Makefile.posix, the line:
 
@@ -110,21 +110,21 @@ Replaced with:
 $ GNU_INSTALL_ROOT := /usr/
 ```
 
-## Clone repository
+#### Clone repository
 Inside nRF5_SDK_11/
 
 ```
 $ git clone https://github.com/mattdibi/redox-w-firmware
 ```
 
-## Install udev rules
+#### Install udev rules
 
 ```
 $ sudo cp redox-w-firmware/49-stlinkv2.rules /etc/udev/rules.d/
 ```
 Plug in, or replug in the programmer after this.
 
-## OpenOCD server
+#### OpenOCD server
 The programming header on the side of the keyboard:
 
 <p align="center">
@@ -146,7 +146,7 @@ Info : nrf51.cpu: hardware has 4 breakpoints, 2 watchpoints
 Otherwise you likely have a loose or wrong wire.
 
 
-## Manual programming
+#### Manual programming
 From the factory, these chips need to be erased:
 
 ```
@@ -161,7 +161,7 @@ $ echo flash write_image `readlink -f precompiled-basic-left.hex` | telnet local
 $ echo reset | telnet localhost 4444
 ```
 
-## Automatic make and programming scripts
+#### Automatic make and programming scripts
 To use the automatic build scripts:
 * keyboard-left: `./redox-w-keyboard-basic/program_left.sh`
 * keyboard-right: `./redox-w-keyboard-basic/program_right.sh`

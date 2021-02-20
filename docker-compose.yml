@@ -3,17 +3,13 @@ services:
   # OpenOCD server
   redox-fw-openocd:
     image: redox-fw-openocd:latest
-    network_mode: bridge
-    ports:
-      - "4444:4444"
+    network_mode: host
     devices:
       - "/dev/bus"
   # Nordic SDK toolchain
   redox-fw-toolchain:
     image: redox-fw-toolchain:latest
-    network_mode: bridge
+    network_mode: host
     depends_on:
-        - redox-fw-openocd
-    links:
         - redox-fw-openocd
     command: tail -f /dev/null

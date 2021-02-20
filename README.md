@@ -11,25 +11,25 @@ For additional information about the Redox keyboard visit:
 
 **Requirements:** Linux-based distro (macOS should work but wasn't tested), Docker and Docker-compose installed.
 
-### Build the Openocd image
+#### Build the Openocd image
 
-From inside the redox-w-firmware folder run:
+From inside the `redox-w-firmware` folder run:
 
 ```
 docker build -t redox-fw-openocd:latest --target redox-fw-openocd .
 ```
 
-### Build the toolchain image
+#### Build the toolchain image
 
-From inside the redox-w-firmware folder run:
+From inside the `redox-w-firmware` folder run:
 
 ```
-docker build -t redox-fw-toolchain:latest -target redox-fw-toolchain .
+docker build -t redox-fw-toolchain:latest --target redox-fw-toolchain .
 ```
 
-### Run the two images using docker compose
+#### Run the two images using docker compose
 
-After connecting the STLinkV2 debugger, from inside the redox-w-firmware folder run:
+After connecting the STLinkV2 debugger, from inside the `redox-w-firmware` folder run:
 
 ```
 docker-compose up -d
@@ -37,7 +37,7 @@ docker-compose up -d
 
 You can now start making changes in the code.
 
-### Build and upload the firmware
+#### Build and upload the firmware
 
 After you're satisfied with your changes you can build and upload the firmware by issuing the following:
 
@@ -45,6 +45,14 @@ After you're satisfied with your changes you can build and upload the firmware b
 $ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-receiver-basic/program.sh
 $ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-keyboard-basic/program_right.sh
 $ docker exec -it [redox-fw-toolchain container] ./redox-w-firmware/redox-w-keyboard-basic/program_left.sh
+```
+
+#### Stop the containers
+
+To stop the two running containers run:
+
+```
+docker-compose down
 ```
 
 ## Install dependencies

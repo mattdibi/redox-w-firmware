@@ -15,7 +15,7 @@ CMD openocd -s /usr/local/Cellar/open-ocd/0.8.0/share/openocd/scripts/ \
     -f target/nrf51_stlink.tcl
 
 # -----------------------------------
-# -------- REDOX TOOLCHAIN ----------
+# ------ NORDIX SDK TOOLCHAIN -------
 # -----------------------------------
 FROM ubuntu:16.04 as redox-fw-toolchain
 

@@ -5,7 +5,9 @@ export OUTPUT_FILENAME
 MAKEFILE_NAME := $(MAKEFILE_LIST)
 MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) ) 
 
-TEMPLATE_PATH = ../../../../components/toolchain/gcc
+SDK_ROOT ?= ../../../..
+
+TEMPLATE_PATH = $(SDK_ROOT)/components/toolchain/gcc
 ifeq ($(OS),Windows_NT)
 include $(TEMPLATE_PATH)/Makefile.windows
 else
@@ -37,43 +39,43 @@ remduplicates = $(strip $(if $1,$(firstword $1) $(call remduplicates,$(filter-ou
 
 #source common to all targets
 C_SOURCE_FILES += \
-$(abspath ../../../../components/toolchain/system_nrf51.c) \
 $(abspath ../../main.c) \
-$(abspath ../../../../components/libraries/util/app_error.c) \
-$(abspath ../../../../components/libraries/util/app_error_weak.c) \
-$(abspath ../../../../components/libraries/fifo/app_fifo.c) \
-$(abspath ../../../../components/libraries/util/app_util_platform.c) \
-$(abspath ../../../../components/libraries/util/nrf_assert.c) \
-$(abspath ../../../../components/libraries/uart/retarget.c) \
-$(abspath ../../../../components/libraries/uart/app_uart_fifo.c) \
-$(abspath ../../../../components/drivers_nrf/delay/nrf_delay.c) \
-$(abspath ../../../../components/drivers_nrf/common/nrf_drv_common.c) \
-$(abspath ../../../../components/drivers_nrf/uart/nrf_drv_uart.c) \
+$(SDK_ROOT)/components/toolchain/system_nrf51.c \
+$(SDK_ROOT)/components/libraries/util/app_error.c \
+$(SDK_ROOT)/components/libraries/util/app_error_weak.c \
+$(SDK_ROOT)/components/libraries/fifo/app_fifo.c \
+$(SDK_ROOT)/components/libraries/util/app_util_platform.c \
+$(SDK_ROOT)/components/libraries/util/nrf_assert.c \
+$(SDK_ROOT)/components/libraries/uart/retarget.c \
+$(SDK_ROOT)/components/libraries/uart/app_uart_fifo.c \
+$(SDK_ROOT)/components/drivers_nrf/delay/nrf_delay.c \
+$(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \
+$(SDK_ROOT)/components/drivers_nrf/uart/nrf_drv_uart.c
 
 #assembly files common to all targets
-ASM_SOURCE_FILES  = $(abspath ../../../../components/toolchain/gcc/gcc_startup_nrf51.s)
+ASM_SOURCE_FILES  = $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf51.s
 
 #assembly files common to all targets
-LIBS  = $(abspath ../../../../components/properitary_rf/gzll/gcc/gzll_gcc.a)
+LIBS  = $(SDK_ROOT)/components/properitary_rf/gzll/gcc/gzll_gcc.a
 
 
 #includes common to all targets
 INC_PATHS += -I$(abspath ../../config)
-INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/nrf_soc_nosd)
-INC_PATHS += -I$(abspath ../../../../components/device)
-INC_PATHS += -I$(abspath ../../../../components/libraries/uart)
-INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/hal)
-INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/delay)
-INC_PATHS += -I$(abspath ../../../../components/toolchain/CMSIS/Include)
-INC_PATHS += -I$(abspath ../..)
-INC_PATHS += -I$(abspath ../../../../components/libraries/util)
-INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/uart)
-INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/common)
-INC_PATHS += -I$(abspath ../../../../components/toolchain)
-INC_PATHS += -I$(abspath ../../../../components/drivers_nrf/config)
-INC_PATHS += -I$(abspath ../../../../components/libraries/fifo)
-INC_PATHS += -I$(abspath ../../../../components/toolchain/gcc)
-INC_PATHS += -I$(abspath ../../../../components/properitary_rf/gzll)
+INC_PATHS += -I$(SDK_ROOT)/config
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd
+INC_PATHS += -I$(SDK_ROOT)/components/device
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/uart
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/hal
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/delay
+INC_PATHS += -I$(SDK_ROOT)/components/toolchain/CMSIS/Include
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/util
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/uart
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/common
+INC_PATHS += -I$(SDK_ROOT)/components/toolchain
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/config
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/fifo
+INC_PATHS += -I$(SDK_ROOT)/components/toolchain/gcc
+INC_PATHS += -I$(SDK_ROOT)/components/properitary_rf/gzll
 
 OBJECT_DIRECTORY = _build
 LISTING_DIRECTORY = $(OBJECT_DIRECTORY)

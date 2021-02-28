@@ -1,57 +1,27 @@
+#ifndef __REDOX_W_FIRMWARE_CONFIG_REDOX_W_H__
+#define __REDOX_W_FIRMWARE_CONFIG_REDOX_W_H__
 
-#define HAND_SENSE 12
-#define RIGHT_HAND false
-#define LEFT_HAND true
-
-#define ALPHA_SENSE 20
-#define ALPABETICAL false
-
-// left hand pins
-
-#define L_C01 10
-#define L_C02 9
-#define L_C03 7
-#define L_C04 6
-#define L_C05 5
-#define L_C06 4
-#define L_C07 3
-#define L_R01 19
-#define L_R02 18
-#define L_R03 17
-#define L_R04 14
-#define L_R05 13
-
-// right hand pins
-
-#define R_C01 6
-#define R_C02 5
-#define R_C03 4
-#define R_C04 3
-#define R_C05 2
-#define R_C06 0
-#define R_C07 30
-#define R_R01 21
-#define R_R02 22
-#define R_R03 23
-#define R_R04 28
-#define R_R05 29
+#if defined(COMPILE_LEFT) && defined(COMPILE_RIGHT)
+#error "Only one of COMPILE_LEFT and COMPILE_RIGHT can be defined at once."
+#endif
 
 #ifdef COMPILE_LEFT
 
 #define PIPE_NUMBER 0
 
-#define C01 L_C01
-#define C02 L_C02
-#define C03 L_C03
-#define C04 L_C04
-#define C05 L_C05
-#define C06 L_C06
-#define C07 L_C07
-#define R01 L_R01
-#define R02 L_R02
-#define R03 L_R03
-#define R04 L_R04
-#define R05 L_R05
+#define C01 3
+#define C02 4
+#define C03 5
+#define C04 6
+#define C05 7
+#define C06 9
+#define C07 10
+
+#define R01 19
+#define R02 18
+#define R03 17
+#define R04 14
+#define R05 13
 
 #endif
 
@@ -59,18 +29,19 @@
 
 #define PIPE_NUMBER 1
 
-#define C01 R_C01
-#define C02 R_C02
-#define C03 R_C03
-#define C04 R_C04
-#define C05 R_C05
-#define C06 R_C06
-#define C07 R_C07
-#define R01 R_R01
-#define R02 R_R02
-#define R03 R_R03
-#define R04 R_R04
-#define R05 R_R05
+#define C01 30
+#define C02 0
+#define C03 2
+#define C04 3
+#define C05 4
+#define C06 5
+#define C07 6
+
+#define R01 21
+#define R02 22
+#define R03 23
+#define R04 28
+#define R05 29
 
 #endif
 
@@ -82,3 +53,5 @@
                                  .rc_ctiv       = 0,                                \
                                  .rc_temp_ctiv  = 0,                                \
                                  .xtal_accuracy = NRF_CLOCK_LF_XTAL_ACCURACY_20_PPM}
+
+#endif /* __REDOX_W_FIRMWARE_CONFIG_REDOX_W_H__ */

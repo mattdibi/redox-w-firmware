@@ -20,8 +20,6 @@
 const nrf_drv_rtc_t rtc_maint = NRF_DRV_RTC_INSTANCE(0); /**< Declaring an instance of nrf_drv_rtc for RTC0. */
 const nrf_drv_rtc_t rtc_deb = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
 
-const uint32_t COL_PINS[COLUMNS] = { C01, C02, C03, C04, C05, C06, C07 };
-const unsigned short REMAINING_POSITIONS = 8 - COLUMNS;
 
 // Define payload length
 #define TX_PAYLOAD_LENGTH ROWS ///< 5 byte payload length when transmitting
@@ -73,6 +71,7 @@ static void read_keys(void)
     unsigned short c;
     volatile uint32_t input = 0;
     uint8_t row_stat[5] = {0, 0, 0, 0, 0};
+    static const uint32_t COL_PINS[] = { C01, C02, C03, C04, C05, C06, C07 };
 
     // scan matrix by columns
     for (c = 0; c < COLUMNS; ++c) {
@@ -86,11 +85,11 @@ static void read_keys(void)
         nrf_gpio_pin_clear(COL_PINS[c]);
     }
 
-    keys_buffer[0] = row_stat[0] << REMAINING_POSITIONS;
-    keys_buffer[1] = row_stat[1] << REMAINING_POSITIONS;
-    keys_buffer[2] = row_stat[2] << REMAINING_POSITIONS;
-    keys_buffer[3] = row_stat[3] << REMAINING_POSITIONS;
-    keys_buffer[4] = row_stat[4] << REMAINING_POSITIONS;
+    keys_buffer[0] = row_stat[0];
+    keys_buffer[1] = row_stat[1];
+    keys_buffer[2] = row_stat[2];
+    keys_buffer[3] = row_stat[3];
+    keys_buffer[4] = row_stat[4];
 
     return;
 }

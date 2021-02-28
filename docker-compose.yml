@@ -7,6 +7,8 @@ services:
         dockerfile: Dockerfile_openocd
     image: redox-fw-openocd:latest
     network_mode: host
+    volumes:
+      - ./:/usr/src/nRF5_SDK_11/redox-w-firmware
     devices:
       - "/dev/bus"
   # Nordic SDK toolchain
@@ -16,5 +18,7 @@ services:
         dockerfile: Dockerfile_toolchain
     image: redox-fw-toolchain:latest
     network_mode: host
+    volumes:
+      - ./:/usr/src/nRF5_SDK_11/redox-w-firmware
     depends_on:
         - openocd

@@ -69,13 +69,22 @@ static void gpio_config(void)
 static void read_keys(void)
 {
     unsigned short c;
-    volatile uint32_t input = 0;
+    uint32_t input = 0;
     uint8_t row_stat[5] = {0, 0, 0, 0, 0};
     static const uint32_t COL_PINS[] = { C01, C02, C03, C04, C05, C06, C07 };
 
     // scan matrix by columns
     for (c = 0; c < COLUMNS; ++c) {
+        // Force the compiler to add one cycle gap between activating
+        // the column pin and reading the input to allow some time for
+        // it to be come stable. Note that compile optimizations are
+        // not allowed for next three statements. Setting the pin
+        // write a location which is marked as volatile
+        // (NRF_GPIO->OUTSET) and reading the input is also a memory
+        // access to a location which is marked as volatile too
+        // (NRF_GPIO->IN).
         nrf_gpio_pin_set(COL_PINS[c]);
+        asm volatile("nop");
         input = NRF_GPIO->IN;
         row_stat[0] = (row_stat[0] << 1) | ((input >> R01) & 1);
         row_stat[1] = (row_stat[1] << 1) | ((input >> R02) & 1);

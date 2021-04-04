@@ -17,28 +17,16 @@
 /** Configuration */
 /*****************************************************************************/
 
-const nrf_drv_rtc_t rtc_maint = NRF_DRV_RTC_INSTANCE(0); /**< Declaring an instance of nrf_drv_rtc for RTC0. */
-const nrf_drv_rtc_t rtc_deb = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
+const nrf_drv_rtc_t rtc = NRF_DRV_RTC_INSTANCE(1); /**< Declaring an instance of nrf_drv_rtc for RTC1. */
 
-
-// Define payload length
-#define TX_PAYLOAD_LENGTH ROWS ///< 5 byte payload length when transmitting
 
 // Data and acknowledgement payloads
-static uint8_t data_payload[TX_PAYLOAD_LENGTH];                ///< Payload to send to Host.
 static uint8_t ack_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH]; ///< Placeholder for received ACK payloads from Host.
 
 // Debounce time (dependent on tick frequency)
 #define DEBOUNCE 5
-#define ACTIVITY 500
-
-// Key buffers
-static uint8_t keys[ROWS], keys_snapshot[ROWS], keys_buffer[ROWS];
-static uint32_t debounce_ticks, activity_ticks;
-static volatile bool debouncing = false;
-
-// Debug helper variables
-static volatile bool init_ok, enable_ok, push_ok, pop_ok, tx_success;
+// Mark as inactive after a number of ticks:
+#define INACTIVITY_THRESHOLD 500 // 0.5sec
 
 #ifdef COMPILE_LEFT
 static uint8_t channel_table[3]={4, 42, 77};
@@ -66,16 +54,24 @@ static void gpio_config(void)
 }
 
 // Return the key states
-static void read_keys(void)
+static void read_keys(uint8_t *row_stat)
 {
     unsigned short c;
-    volatile uint32_t input = 0;
-    uint8_t row_stat[5] = {0, 0, 0, 0, 0};
+    uint32_t input = 0;
     static const uint32_t COL_PINS[] = { C01, C02, C03, C04, C05, C06, C07 };
 
     // scan matrix by columns
     for (c = 0; c < COLUMNS; ++c) {
+        // Force the compiler to add one cycle gap between activating
+        // the column pin and reading the input to allow some time for
+        // it to be come stable. Note that compile optimizations are
+        // not allowed for next three statements. Setting the pin
+        // write a location which is marked as volatile
+        // (NRF_GPIO->OUTSET) and reading the input is also a memory
+        // access to a location which is marked as volatile too
+        // (NRF_GPIO->IN).
         nrf_gpio_pin_set(COL_PINS[c]);
+        asm volatile("nop");
         input = NRF_GPIO->IN;
         row_stat[0] = (row_stat[0] << 1) | ((input >> R01) & 1);
         row_stat[1] = (row_stat[1] << 1) | ((input >> R02) & 1);
@@ -85,16 +81,10 @@ static void read_keys(void)
         nrf_gpio_pin_clear(COL_PINS[c]);
     }
 
-    keys_buffer[0] = row_stat[0];
-    keys_buffer[1] = row_stat[1];
-    keys_buffer[2] = row_stat[2];
-    keys_buffer[3] = row_stat[3];
-    keys_buffer[4] = row_stat[4];
-
-    return;
 }
 
-static bool compare_keys(uint8_t* first, uint8_t* second, uint32_t size)
+static bool compare_keys(const uint8_t* first, const uint8_t* second,
+                         uint32_t size)
 {
     for(int i=0; i < size; i++)
     {
@@ -106,7 +96,7 @@ static bool compare_keys(uint8_t* first, uint8_t* second, uint32_t size)
     return true;
 }
 
-static bool empty_keys(void)
+static bool empty_keys(const uint8_t* keys_buffer)
 {
     for(int i=0; i < ROWS; i++)
     {
@@ -118,73 +108,15 @@ static bool empty_keys(void)
     return true;
 }
 
-// Assemble packet and send to receiver
-static void send_data(void)
+static bool handle_inactivity(const uint8_t *keys_buffer)
 {
-    for(int i=0; i < ROWS; i++)
-    {
-        data_payload[i] = keys[i];
-    }
-    nrf_gzll_add_packet_to_tx_fifo(PIPE_NUMBER, data_payload, TX_PAYLOAD_LENGTH);
-}
-
-// 8Hz held key maintenance, keeping the reciever keystates valid
-static void handler_maintenance(nrf_drv_rtc_int_type_t int_type)
-{
-    send_data();
-}
-
-// 1000Hz debounce sampling
-static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
-{
-    read_keys();
-
-    // debouncing, waits until there have been no transitions in 5ms (assuming five 1ms ticks)
-    if (debouncing)
-    {
-        // if debouncing, check if current keystates equal to the snapshot
-        if (compare_keys(keys_snapshot, keys_buffer, ROWS))
-        {
-            // DEBOUNCE ticks of stable sampling needed before sending data
-            debounce_ticks++;
-            if (debounce_ticks == DEBOUNCE)
-            {
-                for(int j=0; j < ROWS; j++)
-                {
-                    keys[j] = keys_snapshot[j];
-                }
-                send_data();
-            }
-        }
-        else
-        {
-            // if keys change, start period again
-            debouncing = false;
-        }
-    }
-    else
-    {
-        // if the keystate is different from the last data
-        // sent to the receiver, start debouncing
-        if (!compare_keys(keys, keys_buffer, ROWS))
-        {
-            for(int k=0; k < ROWS; k++)
-            {
-                keys_snapshot[k] = keys_buffer[k];
-            }
-            debouncing = true;
-            debounce_ticks = 0;
-        }
-    }
+    static uint32_t inactivity_ticks = 0;
 
     // looking for 500 ticks of no keys pressed, to go back to deep sleep
-    if (empty_keys())
-    {
-        activity_ticks++;
-        if (activity_ticks > ACTIVITY)
-        {
-            nrf_drv_rtc_disable(&rtc_maint);
-            nrf_drv_rtc_disable(&rtc_deb);
+    if (empty_keys(keys_buffer)) {
+        inactivity_ticks++;
+        if (inactivity_ticks > INACTIVITY_THRESHOLD) {
+            nrf_drv_rtc_disable(&rtc);
             nrf_gpio_pin_set(C01);
             nrf_gpio_pin_set(C02);
             nrf_gpio_pin_set(C03);
@@ -192,14 +124,54 @@ static void handler_debounce(nrf_drv_rtc_int_type_t int_type)
             nrf_gpio_pin_set(C05);
             nrf_gpio_pin_set(C06);
             nrf_gpio_pin_set(C07);
+
+            inactivity_ticks = 0;
+
+            return true;
         }
-
-    }
-    else
-    {
-        activity_ticks = 0;
+    } else {
+        inactivity_ticks = 0;
     }
 
+    return false;
+}
+
+static void handle_send(const uint8_t* keys_buffer)
+{
+    static uint8_t keys_snapshot[ROWS] = {0};
+    static uint32_t debounce_ticks = 0;
+
+    const bool no_change = compare_keys(keys_buffer, keys_snapshot, ROWS);
+    if (no_change) {
+        debounce_ticks++;
+        // debouncing - send only if the keys state has been stable
+        // for DEBOUNCE ticks
+        if (debounce_ticks == DEBOUNCE) {
+            // Assemble packet and send to receiver
+            nrf_gzll_add_packet_to_tx_fifo(PIPE_NUMBER, keys_snapshot, ROWS);
+            debounce_ticks = 0;
+        }
+    } else {
+        // change detected, start over
+        debounce_ticks = 0;
+        for (int k = 0; k < ROWS; k++) {
+            keys_snapshot[k] = keys_buffer[k];
+        }
+    }
+}
+
+// 1000Hz debounce sampling
+static void tick(nrf_drv_rtc_int_type_t int_type)
+{
+    uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
+    read_keys(keys_buffer);
+
+    bool is_inactive = handle_inactivity(keys_buffer);
+    if (is_inactive) {
+        return;
+    }
+
+    handle_send(keys_buffer);
 }
 
 // Low frequency clock configuration
@@ -214,16 +186,13 @@ static void lfclk_config(void)
 static void rtc_config(void)
 {
     //Initialize RTC instance
-    nrf_drv_rtc_init(&rtc_maint, NULL, handler_maintenance);
-    nrf_drv_rtc_init(&rtc_deb, NULL, handler_debounce);
+    nrf_drv_rtc_init(&rtc, NULL, tick);
 
     //Enable tick event & interrupt
-    nrf_drv_rtc_tick_enable(&rtc_maint,true);
-    nrf_drv_rtc_tick_enable(&rtc_deb,true);
+    nrf_drv_rtc_tick_enable(&rtc, true);
 
     //Power on RTC instance
-    nrf_drv_rtc_enable(&rtc_maint);
-    nrf_drv_rtc_enable(&rtc_deb);
+    nrf_drv_rtc_enable(&rtc);
 }
 
 int main()
@@ -277,8 +246,7 @@ void GPIOTE_IRQHandler(void)
         NRF_GPIOTE->EVENTS_PORT = 0;
 
         //enable rtc interupt triggers
-        nrf_drv_rtc_enable(&rtc_maint);
-        nrf_drv_rtc_enable(&rtc_deb);
+        nrf_drv_rtc_enable(&rtc);
 
         nrf_gpio_pin_clear(C01);
         nrf_gpio_pin_clear(C02);
@@ -287,11 +255,6 @@ void GPIOTE_IRQHandler(void)
         nrf_gpio_pin_clear(C05);
         nrf_gpio_pin_clear(C06);
         nrf_gpio_pin_clear(C07);
-
-        //TODO: proper interrupt handling to avoid fake interrupts because of matrix scanning
-        //debouncing = false;
-        //debounce_ticks = 0;
-        activity_ticks = 0;
     }
 }
 

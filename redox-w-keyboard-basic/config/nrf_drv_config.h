@@ -36,7 +36,7 @@
 #endif
 
 /* RTC */
-#define RTC0_ENABLED 1
+#define RTC0_ENABLED 0
 
 #if (RTC0_ENABLED == 1)
 #define RTC0_CONFIG_FREQUENCY	 8

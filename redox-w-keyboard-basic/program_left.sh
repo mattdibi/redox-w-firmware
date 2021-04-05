@@ -1,16 +1,15 @@
 #!/bin/bash
 
-SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
-cd $SCRIPT_DIR
+MAKEDIR=$(dirname "$(readlink -f "$0")")/custom/armgcc/
+HEX=_build/nrf51822_xxac-keyboard-left.hex
 
 echo '=============================== MAKING ================================'
-cd custom/armgcc
-make keyboard_side=left
+make -C ${MAKEDIR}
 if [[ $? -ne 0 ]] ; then
     exit 0
 fi
 sleep 0.1
-HEX=`readlink -f _build/nrf51822_xxac-keyboard-left.hex`
+HEX=`readlink -f $(dirname "$(readlink -f "$0")")/custom/armgcc/${HEX}`
 du -b $HEX
 
 echo

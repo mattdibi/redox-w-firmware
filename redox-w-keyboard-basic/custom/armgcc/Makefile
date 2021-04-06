@@ -1,9 +1,6 @@
 PROJECT_NAME := redow-w-keyboard-basic
 
 export OUTPUT_FILENAME
-#MAKEFILE_NAME := $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
-MAKEFILE_NAME := $(MAKEFILE_LIST)
-MAKEFILE_DIR := $(dir $(MAKEFILE_NAME) )
 
 SDK_ROOT ?= ../../../..
 
@@ -39,14 +36,12 @@ remduplicates = $(strip $(if $1,$(firstword $1) $(call remduplicates,$(filter-ou
 
 #source common to all targets
 C_SOURCE_FILES += \
-$(abspath ../../main.c) \
 $(SDK_ROOT)/components/toolchain/system_nrf51.c \
 $(SDK_ROOT)/components/drivers_nrf/delay/nrf_delay.c \
 $(SDK_ROOT)/components/drivers_nrf/clock/nrf_drv_clock.c \
 $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
 $(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \
-$(SDK_ROOT)/components/drivers_nrf/rtc/nrf_drv_rtc.c \
-
+$(SDK_ROOT)/components/drivers_nrf/rtc/nrf_drv_rtc.c
 
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf51.s
@@ -94,14 +89,6 @@ CFLAGS += -mfloat-abi=soft
 CFLAGS += -ffunction-sections -fdata-sections -fno-strict-aliasing
 CFLAGS += -fno-builtin --short-enums
 
-ifeq ("$(keyboard_side)","left") 
-CFLAGS += -DCOMPILE_LEFT 
-endif
-
-ifeq ("$(keyboard_side)","right") 
-CFLAGS += -DCOMPILE_RIGHT 
-endif
-
 # keep every function in separate section. This will allow linker to dump unused functions
 LDFLAGS += -Xlinker -Map=$(LISTING_DIRECTORY)/$(OUTPUT_FILENAME).map
 LDFLAGS += -mthumb -mabi=aapcs -L $(TEMPLATE_PATH) -T$(LINKER_SCRIPT)
@@ -121,17 +108,11 @@ ASMFLAGS += -DBOARD_CUSTOM
 ASMFLAGS += -DBSP_DEFINES_ONLY
 
 #default target - first one defined
-default: clean nrf51822_xxac
+default: $(BUILD_DIRECTORIES) all
 
 #building all targets
-all: clean
-	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e cleanobj
-	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e nrf51822_xxac
-
-#target for printing all targets
-help:
-	@echo following targets are available:
-	@echo 	nrf51822_xxac
+all: $(OUTPUT_BINARY_DIRECTORY)/nrf51822_xxac-keyboard-left.hex  \
+     $(OUTPUT_BINARY_DIRECTORY)/nrf51822_xxac-keyboard-right.hex
 
 C_SOURCE_FILE_NAMES = $(notdir $(C_SOURCE_FILES))
 C_PATHS = $(call remduplicates, $(dir $(C_SOURCE_FILES) ) )
@@ -146,18 +127,24 @@ vpath %.s $(ASM_PATHS)
 
 OBJECTS = $(C_OBJECTS) $(ASM_OBJECTS)
 
-nrf51822_xxac: OUTPUT_FILENAME := "nrf51822_xxac-keyboard-$(keyboard_side)"
-nrf51822_xxac: LINKER_SCRIPT=gzll_gcc_nrf51.ld
+LINKER_SCRIPT=gzll_gcc_nrf51.ld
 
-nrf51822_xxac: $(BUILD_DIRECTORIES) $(OBJECTS)
-	@echo Linking target: $(OUTPUT_FILENAME).out
-	$(NO_ECHO)$(CC) $(LDFLAGS) $(OBJECTS) $(LIBS) -lm -o $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
-	$(NO_ECHO)$(MAKE) -f $(MAKEFILE_NAME) -C $(MAKEFILE_DIR) -e finalize
+.SECONDARY:
 
 ## Create build directories
 $(BUILD_DIRECTORIES):
-	echo $(MAKEFILE_NAME)
 	$(MK) $@
+
+$(OBJECT_DIRECTORY)/main-keyboard-left.o: CFLAGS += -DCOMPILE_LEFT
+$(OBJECT_DIRECTORY)/main-keyboard-right.o: CFLAGS += -DCOMPILE_RIGHT
+
+$(OBJECT_DIRECTORY)/main-%.o: $(abspath ../../main.c)
+	@echo Compiling file: $(notdir $<)
+	$(NO_ECHO)$(CC) $(CFLAGS) $(INC_PATHS) -c -o $@ $<
+
+$(OUTPUT_BINARY_DIRECTORY)/nrf51822_xxac-%.out: $(OBJECTS) $(OBJECT_DIRECTORY)/main-%.o
+	@echo Linking target: $@
+	$(NO_ECHO)$(CC) $(LDFLAGS) $^ $(LIBS) -lm -o $@
 
 # Create objects from C SRC files
 $(OBJECT_DIRECTORY)/%.o: %.c
@@ -168,43 +155,24 @@ $(OBJECT_DIRECTORY)/%.o: %.c
 $(OBJECT_DIRECTORY)/%.o: %.s
 	@echo Assembly file: $(notdir $<)
 	$(NO_ECHO)$(CC) $(ASMFLAGS) $(INC_PATHS) -c -o $@ $<
-# Link
-$(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out: $(BUILD_DIRECTORIES) $(OBJECTS)
-	@echo Linking target: $(OUTPUT_FILENAME).out
-	$(NO_ECHO)$(CC) $(LDFLAGS) $(OBJECTS) $(LIBS) -lm -o $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
-## Create binary .bin file from the .out file
-$(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).bin: $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
-	@echo Preparing: $(OUTPUT_FILENAME).bin
-	$(NO_ECHO)$(OBJCOPY) -O binary $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).bin
 
-## Create binary .hex file from the .out file
-$(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex: $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
-	@echo Preparing: $(OUTPUT_FILENAME).hex
-	$(NO_ECHO)$(OBJCOPY) -O ihex $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex
-
-finalize: genbin genhex echosize
-
-genbin:
-	@echo Preparing: $(OUTPUT_FILENAME).bin
-	$(NO_ECHO)$(OBJCOPY) -O binary $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).bin
-
-## Create binary .hex file from the .out file
-genhex:
-	@echo Preparing: $(OUTPUT_FILENAME).hex
-	$(NO_ECHO)$(OBJCOPY) -O ihex $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).hex
-echosize:
-	-@echo ''
+%.bin: %.out
+	@echo Preparing: $@
+	$(NO_ECHO)$(OBJCOPY) -O binary $< $@
 	$(NO_ECHO)$(SIZE) $(OUTPUT_BINARY_DIRECTORY)/$(OUTPUT_FILENAME).out
-	-@echo ''
+
+## Create binary .hex file from the .out file
+%.hex: %.out
+	@echo Preparing: $@
+	$(NO_ECHO)$(OBJCOPY) -O ihex $^ $@
 
 clean:
 	$(RM) $(BUILD_DIRECTORIES)
 
 cleanobj:
 	$(RM) $(BUILD_DIRECTORIES)/*.o
-flash: nrf51822_xxac
-	@echo Flashing: $(OUTPUT_BINARY_DIRECTORY)/$<.hex
-	nrfjprog --program $(OUTPUT_BINARY_DIRECTORY)/$<.hex -f nrf51  --chiperase
-	nrfjprog --reset -f nrf51
 
-## Flash softdevice
+flash-%: $(OUTPUT_BINARY_DIRECTORY)/nrf51822_xxac-%.hex
+	@echo Flashing: $<
+	nrfjprog --program $< -f nrf51  --chiperase
+	nrfjprog --reset -f nrf51

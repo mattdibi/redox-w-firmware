@@ -37,11 +37,17 @@ remduplicates = $(strip $(if $1,$(firstword $1) $(call remduplicates,$(filter-ou
 #source common to all targets
 C_SOURCE_FILES += \
 $(SDK_ROOT)/components/toolchain/system_nrf51.c \
+$(SDK_ROOT)/components/libraries/util/app_error.c \
+$(SDK_ROOT)/components/libraries/util/app_error_weak.c \
 $(SDK_ROOT)/components/drivers_nrf/delay/nrf_delay.c \
 $(SDK_ROOT)/components/drivers_nrf/clock/nrf_drv_clock.c \
 $(SDK_ROOT)/components/libraries/util/app_util_platform.c \
 $(SDK_ROOT)/components/drivers_nrf/common/nrf_drv_common.c \
-$(SDK_ROOT)/components/drivers_nrf/rtc/nrf_drv_rtc.c
+$(SDK_ROOT)/components/drivers_nrf/rtc/nrf_drv_rtc.c \
+$(SDK_ROOT)/components/libraries/uart/retarget.c \
+$(SDK_ROOT)/components/libraries/uart/app_uart_fifo.c \
+$(SDK_ROOT)/components/libraries/fifo/app_fifo.c \
+$(SDK_ROOT)/components/drivers_nrf/uart/nrf_drv_uart.c
 
 #assembly files common to all targets
 ASM_SOURCE_FILES  = $(SDK_ROOT)/components/toolchain/gcc/gcc_startup_nrf51.s
@@ -52,7 +58,9 @@ LIBS  = $(SDK_ROOT)/components/properitary_rf/gzll/gcc/gzll_gcc.a
 #includes common to all targets
 INC_PATHS  = -I$(abspath ../../config)
 INC_PATHS += -I$(SDK_ROOT)/components/device
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/uart
 INC_PATHS += -I$(SDK_ROOT)/components/toolchain/CMSIS/Include
+INC_PATHS += -I$(SDK_ROOT)/components/libraries/fifo
 INC_PATHS += -I$(SDK_ROOT)/components/properitary_rf/gzll
 INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/hal
 INC_PATHS += -I$(SDK_ROOT)/components/toolchain/gcc
@@ -63,6 +71,7 @@ INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/nrf_soc_nosd
 INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/common
 INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/clock
 INC_PATHS += -I$(SDK_ROOT)/components/libraries/util
+INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/uart
 INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/config
 INC_PATHS += -I$(SDK_ROOT)/components/drivers_nrf/rtc
 

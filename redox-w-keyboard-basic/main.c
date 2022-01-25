@@ -1,17 +1,60 @@
 /*
  * Either COMPILE_RIGHT or COMPILE_LEFT has to be defined from the make call to allow proper functionality
  */
-
+#include <string.h>
 #include "redox-w.h"
 #include "nrf_drv_config.h"
 #include "nrf_gzll.h"
+#include "app_uart.h"
+#include "app_error.h"
+#include "nrf.h"
 #include "nrf_gpio.h"
 #include "nrf_delay.h"
 #include "nrf_drv_clock.h"
 #include "nrf_drv_rtc.h"
 #include "nrf51_bitfields.h"
 #include "nrf51.h"
+#include "nrf_drv_uart.h"
+#include "nrf_delay.h"
 
+#define MAX_TEST_DATA_BYTES     (15U)                /**< max number of test bytes to be used for tx and rx. */
+#define UART_TX_BUF_SIZE 256                         /**< UART TX buffer size. */
+#define UART_RX_BUF_SIZE 1                           /**< UART RX buffer size. */
+
+
+#define RX_PIN_NUMBER  25
+#define TX_PIN_NUMBER  24
+#define CTS_PIN_NUMBER 11
+#define RTS_PIN_NUMBER 12
+#define HWFC           false
+
+// Binary printing
+#define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c"
+#define BYTE_TO_BINARY(byte)  \
+  (byte & 0x40 ? '#' : '.'), \
+  (byte & 0x20 ? '#' : '.'), \
+  (byte & 0x10 ? '#' : '.'), \
+  (byte & 0x08 ? '#' : '.'), \
+  (byte & 0x04 ? '#' : '.'), \
+  (byte & 0x02 ? '#' : '.'), \
+  (byte & 0x01 ? '#' : '.')
+
+// Debug helper variables
+extern nrf_gzll_error_code_t nrf_gzll_error_code;   ///< Error code
+static FLASH_CTRL flash_t;
+static uint8_t keys_view[5];
+static bool switch_flag = false;
+void uart_error_handle(app_uart_evt_t * p_event)
+{
+    if (p_event->evt_type == APP_UART_COMMUNICATION_ERROR)
+    {
+        APP_ERROR_HANDLER(p_event->data.error_communication);
+    }
+    else if (p_event->evt_type == APP_UART_FIFO_ERROR)
+    {
+        APP_ERROR_HANDLER(p_event->data.error_code);
+    }
+}
 
 /*****************************************************************************/
 /** Configuration */
@@ -26,7 +69,7 @@ static uint8_t ack_payload[NRF_GZLL_CONST_MAX_PAYLOAD_LENGTH]; ///< Placeholder 
 // Debounce time (dependent on tick frequency)
 #define DEBOUNCE 5
 // Mark as inactive after a number of ticks:
-#define INACTIVITY_THRESHOLD 500 // 0.5sec
+#define INACTIVITY_THRESHOLD 300 // 0.3sec
 
 #ifdef COMPILE_LEFT
 static uint8_t channel_table[3]={4, 42, 77};
@@ -34,6 +77,70 @@ static uint8_t channel_table[3]={4, 42, 77};
 #ifdef COMPILE_RIGHT
 static uint8_t channel_table[3]={25, 63, 33};
 #endif
+
+/** @brief Function for erasing a page in flash.
+ *
+ * @param page_address Address of the first word in the page to be erased.
+ */
+static void flash_page_erase(uint32_t * page_address)
+{
+    // Turn on flash erase enable and wait until the NVMC is ready:
+    NRF_NVMC->CONFIG = (NVMC_CONFIG_WEN_Een << NVMC_CONFIG_WEN_Pos);
+
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+    {
+        // Do nothing.
+    }
+
+    // Erase page:
+    NRF_NVMC->ERASEPAGE = (uint32_t)page_address;
+
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+    {
+        // Do nothing.
+    }
+
+    // Turn off flash erase enable and wait until the NVMC is ready:
+    NRF_NVMC->CONFIG = (NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos);
+
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+    {
+        // Do nothing.
+    }
+}
+
+
+/** @brief Function for filling a page in flash with a value.
+ *
+ * @param[in] address Address of the first word in the page to be filled.
+ * @param[in] value Value to be written to flash.
+ */
+static void flash_word_write(uint32_t * address, uint32_t value)
+{
+    // Turn on flash write enable and wait until the NVMC is ready:
+    NRF_NVMC->CONFIG = (NVMC_CONFIG_WEN_Wen << NVMC_CONFIG_WEN_Pos);
+
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+    {
+        // Do nothing.
+    }
+
+    *address = value;
+
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+    {
+        // Do nothing.
+    }
+
+    // Turn off flash write enable and wait until the NVMC is ready:
+    NRF_NVMC->CONFIG = (NVMC_CONFIG_WEN_Ren << NVMC_CONFIG_WEN_Pos);
+
+    while (NRF_NVMC->READY == NVMC_READY_READY_Busy)
+    {
+        // Do nothing.
+    }
+}
+
 
 // Setup switch pins with pullups
 static void gpio_config(void)
@@ -116,6 +223,92 @@ static bool empty_keys(const uint8_t* keys_buffer)
     return true;
 }
 
+static void pipe_addr_store(uint32_t addr0, uint32_t addr1)
+{
+    if(flash_t.used_size < flash_t.pg_size)
+    {
+       // Erase page:
+       flash_page_erase(flash_t.page_start_addr);
+       // Write to flash
+       if (flash_t.patold_0 != addr0)
+       {
+           flash_t.patold_0 = addr0;
+           flash_word_write(flash_t.pipe0_store_addr, (uint32_t)addr0);
+           flash_t.used_size += 4;
+#ifdef DEBUG
+           printf("addr0:%p was write to flash\n\r", (void *)addr0);
+#endif
+       }
+       if (flash_t.patold_1 != addr1)
+       {
+           flash_t.patold_1 = addr1;
+           flash_word_write(flash_t.pipe1_store_addr, (uint32_t)addr1);
+           flash_t.used_size += 4;
+#ifdef DEBUG
+           printf("addr1:%p was write to flash\n\r", (void *)addr1);
+#endif
+       }
+    }
+}
+
+static bool check_mask(const uint8_t* keys_buffer)
+{
+	/* pre press */
+	if (!((keys_buffer[ROW1] & MASK_COL0)))
+		return false;
+
+	if (keys_buffer[ROW0] & MASK_COL1) {
+		pipe_addr_store(BASE_ADDR0, BASE_ADDR1);
+#ifdef DEBUG
+		printf("ad0\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW0] & MASK_COL2) {
+		pipe_addr_store(BASE_ADDR2, BASE_ADDR3);
+#ifdef DEBUG
+		printf("ad1\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW0] & MASK_COL3) {
+		pipe_addr_store(BASE_ADDR4, BASE_ADDR5);
+#ifdef DEBUG
+		printf("ad2\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW0] & MASK_COL4) {
+		pipe_addr_store(BASE_ADDR6, BASE_ADDR7);
+#ifdef DEBUG
+		printf("ad3\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW0] & MASK_COL5) {
+		pipe_addr_store(BASE_ADDR8, BASE_ADDR9);
+#ifdef DEBUG
+		printf("ad4\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW0] & MASK_COL6) {
+		pipe_addr_store(BASE_ADDR10, BASE_ADDR11);
+#ifdef DEBUG
+		printf("ad5\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW1] & MASK_COL6) {
+		pipe_addr_store(BASE_ADDR12, BASE_ADDR13);
+#ifdef DEBUG
+		printf("ad6\n\r");
+#endif
+		return true;
+	} else if (keys_buffer[ROW2] & MASK_COL6) {
+		pipe_addr_store(BASE_ADDR14, BASE_ADDR15);
+#ifdef DEBUG
+		printf("ad7\n\r");
+#endif
+		return true;
+	} else
+		return false;
+}
+
 static void handle_inactivity(const uint8_t *keys_buffer)
 {
     static uint32_t inactivity_ticks = 0;
@@ -141,6 +334,30 @@ static void handle_inactivity(const uint8_t *keys_buffer)
         inactivity_ticks = 0;
     }
 }
+
+#ifdef DEBUG
+static void handle_device_switch(const uint8_t *keys_buffer)
+{
+	// debugging help, for printing keystates to a serial console
+	printf(BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN " " \
+	       BYTE_TO_BINARY_PATTERN "\r\n\r\n", \
+	       BYTE_TO_BINARY(keys_buffer[0]), \
+	       BYTE_TO_BINARY(keys_buffer[1]), \
+	       BYTE_TO_BINARY(keys_buffer[2]), \
+	       BYTE_TO_BINARY(keys_buffer[3]), \
+	       BYTE_TO_BINARY(keys_buffer[4]), \
+	       BYTE_TO_BINARY(keys_buffer[5]), \
+	       BYTE_TO_BINARY(keys_buffer[6]), \
+	       BYTE_TO_BINARY(keys_buffer[7]));
+
+}
+#endif
 
 static void handle_send(const uint8_t* keys_buffer)
 {
@@ -171,9 +388,11 @@ static void tick(nrf_drv_rtc_int_type_t int_type)
 {
     uint8_t keys_buffer[ROWS] = {0, 0, 0, 0, 0};
     read_keys(keys_buffer);
-
+#ifdef DEBUG
+    memcpy(keys_view, keys_buffer, sizeof(keys_buffer)/sizeof(keys_buffer[0]));
+#endif
     handle_inactivity(keys_buffer);
-
+    check_mask(keys_buffer);
     handle_send(keys_buffer);
 }
 
@@ -200,6 +419,60 @@ static void rtc_config(void)
 
 int main()
 {
+    uint32_t err_code;
+#ifdef DEBUG
+    uint32_t address;
+#endif
+    uint32_t base_address0;
+    uint32_t base_address1;
+    const app_uart_comm_params_t comm_params =
+      {
+          RX_PIN_NUMBER,
+          TX_PIN_NUMBER,
+          RTS_PIN_NUMBER,
+          CTS_PIN_NUMBER,
+          APP_UART_FLOW_CONTROL_DISABLED,
+          false,
+	  UART_BAUDRATE_BAUDRATE_Baud115200
+          //UART_BAUDRATE_BAUDRATE_Baud1M
+      };
+
+    APP_UART_FIFO_INIT(&comm_params,
+                         UART_RX_BUF_SIZE,
+                         UART_TX_BUF_SIZE,
+                         uart_error_handle,
+                         APP_IRQ_PRIORITY_LOW,
+                         err_code);
+
+    APP_ERROR_CHECK(err_code);
+
+    /* Read flash to get address*/
+    flash_t.patold_0  = 0;
+    flash_t.patold_1  = 0;
+    flash_t.pg_size = NRF_FICR->CODEPAGESIZE;
+    flash_t.pg_num  = NRF_FICR->CODESIZE - 1;  // Use last page in flash
+
+    // calculate store address:
+    flash_t.page_start_addr  = (uint32_t *)(flash_t.pg_size * flash_t.pg_num);
+    flash_t.pipe0_store_addr = (uint32_t *)flash_t.page_start_addr;
+    flash_t.pipe1_store_addr = (uint32_t *)(flash_t.pipe0_store_addr + 4);
+
+    base_address0 = (uint32_t)*(flash_t.pipe0_store_addr);
+#ifdef DEBUG
+    printf("read-flash-pipe0: %p\n\r\n\r", (void *)base_address0);
+#endif
+    base_address1 = (uint32_t)*(flash_t.pipe1_store_addr);
+#ifdef DEBUG
+    printf("read-flash-pipe1: %p\n\r\n\r", (void *)base_address1);
+#endif
+    if (0 == (base_address1 - base_address0)) {
+	base_address0 = BASE_ADDR0;
+	base_address1 = BASE_ADDR1;
+#ifdef DEBUG
+	printf("First boot\n\r");
+#endif
+    }
+
     // Initialize Gazell
     nrf_gzll_init(NRF_GZLL_MODE_DEVICE);
 
@@ -210,10 +483,15 @@ int main()
     nrf_gzll_set_datarate(NRF_GZLL_DATARATE_1MBIT);
     nrf_gzll_set_timeslot_period(900);
 
-    // Addressing
-    nrf_gzll_set_base_address_0(0x01020304);
-    nrf_gzll_set_base_address_1(0x05060708);
-
+    // Set Addressing
+    nrf_gzll_set_base_address_0(base_address0);
+    nrf_gzll_set_base_address_1(base_address1);
+#ifdef DEBUG
+    address = nrf_gzll_get_base_address_0();
+    printf("get-cur-pipe0: %p\n\r\n\r", (void *)address);
+    address = nrf_gzll_get_base_address_1();
+    printf("get-cur-pipe1: %p\n\r\n\r", (void *)address);
+#endif
     // Enable Gazell to start sending over the air
     nrf_gzll_enable();
 
@@ -229,6 +507,10 @@ int main()
     // Main loop, constantly sleep, waiting for RTC and gpio IRQs
     while(1)
     {
+#ifdef DEBUG
+	handle_device_switch(keys_view);
+	nrf_delay_us(100000);
+#endif
         __SEV();
         __WFE();
         __WFE();

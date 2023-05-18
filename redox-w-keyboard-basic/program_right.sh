@@ -17,6 +17,8 @@ echo '============================= PROGRAMMING ============================='
 {
 	echo "reset halt";
 	sleep 0.1;
+	echo "nrf51 mass_erase";
+	sleep 1;
 	echo "flash write_image erase" $HEX;
 	sleep 11;
 	echo "reset";
